@@ -1,0 +1,6 @@
+{
+  "name": "Creative Studio AI | استوديو الإبداع",
+  "description": "شريكك الإبداعي لابتكار الأفكار البصرية، تحليل المراجع، وهندسة البرومبتات الاحترافية لأدوات توليد الصور مع ميزة القراءة الصوتية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

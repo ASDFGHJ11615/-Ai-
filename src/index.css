@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --user-accent: #4C53DB;
+  --user-accent-hover: #3D42B0;
+  --user-accent-light: #EEF2FF;
+  --user-accent-surface: rgba(76, 83, 219, 0.06);
+  --user-accent-ring: rgba(76, 83, 219, 0.25);
+  --user-accent-border: rgba(76, 83, 219, 0.35);
+}
+
+@theme {
+  --color-accent: var(--user-accent);
+  --color-accent-hover: var(--user-accent-hover);
+  --color-accent-light: var(--user-accent-light);
+  --color-accent-surface: var(--user-accent-surface);
+  --color-accent-ring: var(--user-accent-ring);
+  --color-accent-border: var(--user-accent-border);
+}
+
+@layer base {
+  body {
+    font-family: 'Tajawal', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom scrollbar for creative workspace */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
