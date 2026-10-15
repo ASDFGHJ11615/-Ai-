@@ -12,6 +12,7 @@ import {
   Maximize2,
   X,
   Wand2,
+  Camera,
 } from 'lucide-react';
 import {
   FramingSettings,
@@ -20,18 +21,21 @@ import {
   CreativeResult,
   TargetTool,
   PromptCrafterState,
+  CameraAngleId,
 } from '../types.ts';
 import {
   CINEMATIC_RECIPES,
   CINEMATIC_LIGHTING_STYLES,
   DIMENSION_PRESETS,
 } from '../data/presets.ts';
+import { getCameraAngleById } from '../data/cameraAngles.ts';
 import { DimensionsFramingCard } from './DimensionsFramingCard.tsx';
 import { CinematicLightingStudio } from './CinematicLightingStudio.tsx';
 import { ToolDistributionCard } from './ToolDistributionCard.tsx';
 import { PromptCrafterStudio } from './PromptCrafterStudio.tsx';
+import { CameraAnglesCard } from './CameraAnglesCard.tsx';
 
-export type WorkbenchTab = 'crafter' | 'lighting' | 'framing' | 'analytics' | 'none';
+export type WorkbenchTab = 'crafter' | 'lighting' | 'framing' | 'angles' | 'analytics' | 'none';
 
 interface StudioWorkbenchProps {
   framingSettings: FramingSettings;
@@ -42,6 +46,9 @@ interface StudioWorkbenchProps {
   onChangeLightingSettings?: (settings: CinematicLightingSettings) => void;
   onApplyLightingToPrompt?: (snippet: string, arSnippet: string) => void;
   onApplyFramingToPrompt?: () => void;
+  cameraAngle?: CameraAngleId;
+  onChangeCameraAngle?: (angleId: CameraAngleId) => void;
+  onApplyAngleToPrompt?: (snippet: string, arSnippet: string) => void;
   activeBrand: BrandKit | null;
   onOpenBrandVault: () => void;
   onDeactivateBrand?: () => void;
@@ -64,6 +71,9 @@ export const StudioWorkbench: React.FC<StudioWorkbenchProps> = ({
   onChangeLightingSettings,
   onApplyLightingToPrompt,
   onApplyFramingToPrompt,
+  cameraAngle = 'auto',
+  onChangeCameraAngle,
+  onApplyAngleToPrompt,
   activeBrand,
   onOpenBrandVault,
   onDeactivateBrand,
@@ -93,6 +103,7 @@ export const StudioWorkbench: React.FC<StudioWorkbenchProps> = ({
 
   const activeRecipe = CINEMATIC_RECIPES.find((r) => r.id === lightingSettings.recipeId);
   const activeStyle = CINEMATIC_LIGHTING_STYLES.find((s) => s.id === lightingSettings.styleId);
+  const activeAngle = getCameraAngleById(cameraAngle);
 
   const toggleTab = (tab: WorkbenchTab) => {
     setActiveTab(activeTab === tab ? 'none' : tab);
@@ -123,6 +134,8 @@ export const StudioWorkbench: React.FC<StudioWorkbenchProps> = ({
               <span>{isAr ? 'المقاس:' : 'Aspect:'} <strong className="text-slate-700 font-mono">{framingSettings.aspectRatio}</strong></span>
               <span>·</span>
               <span>{isAr ? 'الإضاءة:' : 'Lighting:'} <strong className="text-slate-700">{activeRecipe?.title || activeStyle?.name || 'مخصصة'}</strong></span>
+              <span>·</span>
+              <span>{isAr ? 'الزاوية:' : 'Angle:'} <strong className="text-slate-700">{activeAngle.nameAr}</strong></span>
               <span>·</span>
               <span>
                 {isAr ? 'البراند:' : 'Brand:'}{' '}
@@ -198,6 +211,26 @@ export const StudioWorkbench: React.FC<StudioWorkbenchProps> = ({
             </span>
           </button>
 
+          {/* Tab: Camera Angles & Perspectives (زوايا التصوير) */}
+          <button
+            onClick={() => toggleTab('angles')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'angles'
+                ? 'bg-accent text-white shadow-xs'
+                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 shadow-2xs'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>{isAr ? 'زوايا التصوير' : 'Camera Angles'}</span>
+            <span
+              className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold ${
+                activeTab === 'angles' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-[#4C53DB]'
+              }`}
+            >
+              {activeAngle.nameAr}
+            </span>
+          </button>
+
           {/* Tab 3: Brand Vault */}
           <button
             onClick={onOpenBrandVault}
@@ -254,6 +287,7 @@ export const StudioWorkbench: React.FC<StudioWorkbenchProps> = ({
               {activeTab === 'crafter' && (isAr ? 'استوديو كتابة وهندسة البرومبتات الاحترافية لأدوات توليد الصور (Midjourney, DALL-E, SD...):' : 'Professional Guided Prompt Crafter Studio:')}
               {activeTab === 'lighting' && (isAr ? 'إعدادات استوديو الإضاءة السينمائية المتقدمة:' : 'Cinematic Lighting Studio Controls:')}
               {activeTab === 'framing' && (isAr ? 'إعدادات المقاسات والتأطير التجاري للمنتج:' : 'Dimensions & Framing Controls:')}
+              {activeTab === 'angles' && (isAr ? 'قائمة زوايا التصوير والمنظور البصري الاحترافية المنظمة في 6 فئات:' : 'Organized Camera Angles & Perspectives:')}
               {activeTab === 'analytics' && (isAr ? 'تحليل توزيع الأدوات ومحركات التوليد:' : 'AI Engine Distribution Analytics:')}
             </span>
             <button
@@ -286,6 +320,15 @@ export const StudioWorkbench: React.FC<StudioWorkbenchProps> = ({
               settings={framingSettings}
               onChangeSettings={handleFramingChange}
               onApplyToPrompt={onApplyFramingToPrompt}
+            />
+          )}
+
+          {activeTab === 'angles' && (
+            <CameraAnglesCard
+              selectedAngleId={cameraAngle || 'auto'}
+              onSelectAngle={onChangeCameraAngle || (() => {})}
+              onApplyToPrompt={onApplyAngleToPrompt}
+              language={language}
             />
           )}
 

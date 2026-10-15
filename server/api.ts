@@ -1,6 +1,7 @@
 import express from 'express';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import dotenv from 'dotenv';
+import { getCameraAngleById } from '../src/data/cameraAngles.ts';
 
 dotenv.config();
 
@@ -54,7 +55,8 @@ function createCacheKey(prefix: string, body: any): string {
   const framingSig = body.framingSettings ? `${body.framingSettings.aspectRatio}_${body.framingSettings.productPlacement}` : '';
   const lightingSig = body.lightingSettings ? `${body.lightingSettings.styleId}_${body.lightingSettings.recipeId}` : '';
   const brandSig = body.brandKit?.id || '';
-  return `${prefix}:${body.mode || ''}:${body.targetTool || ''}:${body.action || ''}:${body.personaFocus || ''}:${brandSig}:${framingSig}:${lightingSig}:${body.prompt || ''}:${imgSig}`;
+  const angleSig = body.cameraAngle || 'auto';
+  return `${prefix}:${body.mode || ''}:${body.targetTool || ''}:${body.action || ''}:${body.personaFocus || ''}:${brandSig}:${framingSig}:${lightingSig}:${angleSig}:${body.prompt || ''}:${imgSig}`;
 }
 
 function getCachedResponse(key: string): any | null {
@@ -88,6 +90,7 @@ apiRouter.post('/creative/process', async (req, res) => {
       brandKit,
       framingSettings,
       lightingSettings,
+      cameraAngle = 'auto',
     } = req.body;
 
     if (!prompt && !image) {
@@ -232,6 +235,18 @@ apiRouter.post('/creative/process', async (req, res) => {
       userInstruction += `تنبيه إلزامي للمحرر: أدرج هذا الوصف التقني بدقة كقسم مستقل داخل finalPrompt.englishPrompt بعنوان: "Cinematic Lighting: ..."، ووضّح تفاصيل الإضاءة في breakdown.lighting وفي الشرح العربي.\n\n`;
     }
 
+    // Camera Angles & Perspectives Integration
+    if (cameraAngle && cameraAngle !== 'auto') {
+      const angleDetails = getCameraAngleById(cameraAngle);
+      userInstruction += `\n📸 [زاوية التصوير والمنظور المعتمدة إجبارياً - Camera Angle & Perspective]:\n`;
+      userInstruction += `- الزاوية المطلوبة بدقة: ${angleDetails.nameEn} (${angleDetails.nameAr})\n`;
+      userInstruction += `- التوصيف البصري للكاميرا: ${angleDetails.promptSnippet}\n`;
+      userInstruction += `- التأثير على التكوين: ${angleDetails.compositionSnippet}\n`;
+      userInstruction += `تنبيه إلزامي للمحرر: يجب تضمين مصطلح زاوية التصوير "${angleDetails.nameEn}" صراحةً في صلب البرومبت الإنجليزي finalPrompt.englishPrompt وتوضيحها في breakdown.composition وفي الشرح العربي.\n\n`;
+    } else {
+      userInstruction += `\n📸 [زاوية التصوير والمنظور - Camera Angle]: تلقائي (Auto) - حدد بذكاء إعلاني زاوية الكاميرا والمنظور الأنسب لطبيعة وهوية المنتج (مثل Low Angle للمنتجات الفاخرة، أو 45-degree Three-Quarter للأجهزة، أو Macro للتفاصيل، أو Top-Down للمسطحات)، مع ذكر الزاوية المختارة صراحةً في breakdown.composition.\n\n`;
+    }
+
     userInstruction += `مدخلات المستخدم:\n${prompt || (image ? 'حلل هذه الصورة المرجعية وقدّم أفكاراً وبرومبتات لتطويرها.' : '')}\n`;
 
     userInstruction += `\nيجب عليك إرجاع كائن JSON دقيق بالهيكل التالي (تأكد من ملء finalPrompt.englishPrompt بنص البرومبت الفعلي بالإنجليزية):
@@ -284,7 +299,37 @@ apiRouter.post('/creative/process', async (req, res) => {
       "فكرة تطبيق 3: اقتراح حملة بصرية مبتكرة مستوحاة من روح هذه الصورة"
     ],
     "evolutionIdea": "تصور إبداعي متكامل لتطوير الصورة أو إنشاء مشهد جديد مذهل"
-  }` : ''}${mode === 'concept' ? `,
+  },
+  "advertisingDirections": [
+    {
+      "id": "dir-1",
+      "title": "اسم الاتجاه الإعلاني الأول",
+      "creativeIdea": "الفكرة الإبداعية: فكرة استراتيجية إعلانية مبتكرة مخصصة للمنتج",
+      "visualConception": "التصور البصري: تفاصيل الكادر والمشهد والخلفية وتفاعل المنتج",
+      "style": "النمط: أسلوب بصري محدد (مثل سينمائي إعلاني فخم، أو مينيمالي نقي، أو أسلوب إيديتوريال)",
+      "lightingAndColors": "الإضاءة والألوان: توزيع الإضاءة والظلال ولوحة الألوان المستخرجة",
+      "isBestCandidate": true,
+      "reasonForBest": "سبب تفضيل هذا المرشح كأفضل خيار إعلاني من حيث التأثير والجاذبية"
+    },
+    {
+      "id": "dir-2",
+      "title": "اسم الاتجاه الإعلاني الثاني",
+      "creativeIdea": "فكرة إعلانية بديلة بروح وتوجه مختلف تماماً",
+      "visualConception": "التصور البصري للمشهد والبيئة",
+      "style": "النمط الإعلاني",
+      "lightingAndColors": "الإضاءة والألوان المتناسقة",
+      "isBestCandidate": false
+    },
+    {
+      "id": "dir-3",
+      "title": "اسم الاتجاه الإعلاني الثالث",
+      "creativeIdea": "فكرة إعلانية ثالثة مبتكرة ومميزة",
+      "visualConception": "التصور البصري للمشهد والبيئة",
+      "style": "النمط الإعلاني",
+      "lightingAndColors": "الإضاءة والألوان المتناسقة",
+      "isBestCandidate": false
+    }
+  ]` : ''}${mode === 'concept' ? `,
   "concepts": [
     {
       "name": "اسم المفهوم 1",
@@ -841,6 +886,130 @@ apiRouter.post('/tts', async (req, res) => {
     res.status(500).json({
       success: false,
       error: err.message || 'تعذر توليد القراءة الصوتية عبر الذكاء الاصطناعي.',
+    });
+  }
+});
+
+// High-speed endpoint to develop a selected Advertising Direction into a complete production prompt
+apiRouter.post('/creative/develop-direction-prompt', async (req, res) => {
+  try {
+    const {
+      direction,
+      image,
+      brandKit,
+      framingSettings,
+      lightingSettings,
+      cameraAngle = 'auto',
+      targetTool = 'midjourney',
+    } = req.body;
+
+    if (!direction || !direction.creativeIdea) {
+      return res.status(400).json({
+        success: false,
+        error: 'بيانات الاتجاه الإعلاني غير مكتملة.',
+      });
+    }
+
+    const cacheKey = createCacheKey('dev-direction', req.body);
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      return res.json({ success: true, promptData: cached, fromCache: true });
+    }
+
+    const parts: any[] = [];
+
+    if (image && typeof image === 'string' && image.startsWith('data:')) {
+      const match = image.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        parts.push({
+          inlineData: {
+            mimeType: match[1],
+            data: match[2],
+          },
+        });
+      }
+    }
+
+    let devInstruction = `أنت مهندس البرومبتات والمخرج الفني في استوديو الإبداع (Creative Studio AI).
+المطلوب منك تحويل "الاتجاه الإعلاني المختار" التالي إلى برومبت احترافي متكامل مخصص لأداة ${targetTool} لتوليد الصور الإعلانية، مع الحفاظ التام على هوية وخامات وتفاصيل المنتج المرجعي:
+
+[بيانات الاتجاه الإعلاني المختار]:
+- اسم الاتجاه: ${direction.title || ''}
+- الفكرة الإبداعية: ${direction.creativeIdea}
+- التصور البصري: ${direction.visualConception || ''}
+- النمط: ${direction.style || ''}
+- الإضاءة والألوان: ${direction.lightingAndColors || ''}
+`;
+
+    if (brandKit) {
+      devInstruction += `\n[هوية البراند المطبقة]: ${brandKit.name} - ألوان: ${(brandKit.colors || []).map((c: any) => c.name + ' ' + c.hex).join(', ')}\n`;
+    }
+
+    if (framingSettings) {
+      devInstruction += `\n[التأطير والمقاس المطلوب]: نسبة الأبعاد ${framingSettings.aspectRatio || '16:9'}، موضع المنتج ${framingSettings.productPlacement || 'center'}، الحجم ${framingSettings.productScale || 'standard'}\n`;
+    }
+
+    if (lightingSettings) {
+      devInstruction += `\n[أسلوب الإضاءة السينمائية]: ${lightingSettings.styleId || 'dramatic_cinematic'}، كلفن ${lightingSettings.colorTemperatureK || 5500}K\n`;
+    }
+
+    if (cameraAngle && cameraAngle !== 'auto') {
+      const angleDetails = getCameraAngleById(cameraAngle);
+      devInstruction += `\n[زاوية الكاميرا والمنظور المعتمدة]: ${angleDetails.nameEn} (${angleDetails.nameAr}) - ${angleDetails.promptSnippet}\n`;
+    }
+
+    devInstruction += `\nيجب عليك إرجاع كائن JSON دقيق بالهيكل التالي فقط:
+{
+  "title": "${direction.title || 'برومبت الاتجاه الإعلاني المطور'}",
+  "directionId": "${direction.id || 'dir-selected'}",
+  "targetTool": "${targetTool}",
+  "englishPrompt": "The complete, standalone, production-ready English prompt for ${targetTool} (with precise details of product preservation, scene environment, commercial lighting, camera lens, materials, textures, and parameters)",
+  "arabicPrompt": "الترجمة والتفسير الكامل للبرومبت باللغة العربية مع إرشادات الإنتاج للمصمم",
+  "aspectRatio": "${framingSettings?.aspectRatio || '16:9'}",
+  "parameters": "${targetTool === 'midjourney' ? `--ar ${framingSettings?.aspectRatio || '16:9'} --v 6.1 --style raw` : ''}",
+  "negativePrompt": "blurry, low quality, distorted product, mutated logo, artificial plastic textures, oversaturated amateur",
+  "breakdown": {
+    "subject": "توصيف المنتج وعناصره الرئيسية مع الحفاظ الصارم على هويته",
+    "environment": "بيئة المشهد والخلفية المحيطة المتناسقة مع الاتجاه الإعلاني",
+    "lighting": "أسلوب الإضاءة والظلال والانعكاسات",
+    "composition": "التكوين وزاوية الكاميرا والمنظور",
+    "materials": "الخامات والأنسجة ومستوى الواقعية التجارية"
+  }
+}`;
+
+    parts.push({ text: devInstruction });
+
+    const ai = getGenAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: { parts },
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: 'application/json',
+        temperature: 0.7,
+      },
+    });
+
+    const responseText = response.text || '';
+    let promptData;
+    try {
+      promptData = JSON.parse(responseText);
+    } catch {
+      const match = responseText.match(/\{[\s\S]*\}/);
+      if (match) {
+        promptData = JSON.parse(match[0]);
+      } else {
+        throw new Error('تعذر معالجة استجابة توليد البرومبت ككائن JSON.');
+      }
+    }
+
+    setCachedResponse(cacheKey, promptData);
+    res.json({ success: true, promptData });
+  } catch (err: any) {
+    console.error('Error in /creative/develop-direction-prompt:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'فشل في تطوير الاتجاه الإعلاني إلى برومبت احترافي.',
     });
   }
 });

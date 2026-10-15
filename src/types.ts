@@ -81,6 +81,50 @@ export interface FramingSettings {
   preserveFidelity: boolean;
 }
 
+// Camera Angles & Perspectives Types
+export type CameraAngleId =
+  | 'auto'
+  | 'front'
+  | 'eye_level'
+  | 'side'
+  | 'back'
+  | 'three_quarter'
+  | 'top_down'
+  | 'birds_eye'
+  | 'high_angle'
+  | 'low_angle'
+  | 'worms_eye'
+  | 'high_three_quarter'
+  | 'low_three_quarter'
+  | 'rear_three_quarter'
+  | 'close_up'
+  | 'extreme_close_up'
+  | 'macro'
+  | 'wide_shot'
+  | 'pov'
+  | 'over_the_shoulder'
+  | 'dutch_angle'
+  | 'tilted_side';
+
+export interface CameraAngleOption {
+  id: CameraAngleId;
+  nameAr: string;
+  nameEn: string;
+  descriptionAr: string;
+  promptSnippet: string;
+  compositionSnippet: string;
+  category: string;
+  tag?: string;
+}
+
+export interface CameraAngleCategory {
+  id: string;
+  number: number;
+  titleAr: string;
+  titleEn: string;
+  angles: CameraAngleOption[];
+}
+
 // Cinematic Lighting Studio Types
 export type CinematicLightingStyleId =
   | 'dramatic_cinematic'
@@ -254,6 +298,17 @@ export interface QuickInstantIdea {
   negativePrompt?: string;
 }
 
+export interface AdvertisingDirection {
+  id: string;
+  title: string;
+  creativeIdea: string; // الفكرة الإبداعية
+  visualConception: string; // التصور البصري
+  style: string; // النمط
+  lightingAndColors: string; // الإضاءة والألوان
+  isBestCandidate?: boolean; // المرشح الأفضل
+  reasonForBest?: string; // سبب التفضيل والترشيح
+}
+
 export interface CreativeConcept {
   name: string;
   adIdea: string;
@@ -328,5 +383,8 @@ export interface CreativeResult {
   framingSettings?: FramingSettings;
   lightingSettings?: CinematicLightingSettings;
   quickIdeas?: QuickInstantIdea[];
+  advertisingDirections?: AdvertisingDirection[];
+  selectedDirectionId?: string;
+  cameraAngle?: CameraAngleId;
   rawResponse?: string;
 }

@@ -33,6 +33,8 @@ import {
   QuickInstantIdea,
   CinematicLightingSettings,
   PromptCrafterState,
+  AdvertisingDirection,
+  CameraAngleId,
 } from './types.ts';
 import {
   DEFAULT_BRAND_KITS,
@@ -52,6 +54,7 @@ import { QuickInstantIdeasCard } from './components/QuickInstantIdeasCard.tsx';
 import { ToolDistributionCard } from './components/ToolDistributionCard.tsx';
 import { VisualAnalysisCard } from './components/VisualAnalysisCard.tsx';
 import { ConceptsCard } from './components/ConceptsCard.tsx';
+import { AdvertisingDirectionsCard } from './components/AdvertisingDirectionsCard.tsx';
 import { PromptCard } from './components/PromptCard.tsx';
 import { CopywritingCard } from './components/CopywritingCard.tsx';
 import { StoryCard } from './components/StoryCard.tsx';
@@ -67,6 +70,7 @@ const BRANDS_STORAGE_KEY = 'creative_studio_brand_kits_v1';
 const ACTIVE_BRAND_KEY = 'creative_studio_active_brand_id_v1';
 const FRAMING_STORAGE_KEY = 'creative_studio_framing_v1';
 const LIGHTING_STORAGE_KEY = 'creative_studio_lighting_v1';
+const CAMERA_ANGLE_STORAGE_KEY = 'creative_studio_camera_angle_v1';
 
 export default function App() {
   const [currentAccent, setCurrentAccent] = useState<string>(getSavedAccentColor);
@@ -86,6 +90,15 @@ export default function App() {
 
   // Cinematic Lighting Studio state
   const [lightingSettings, setLightingSettings] = useState<CinematicLightingSettings>(DEFAULT_LIGHTING_SETTINGS);
+
+  // Camera Angles & Perspectives state
+  const [cameraAngle, setCameraAngle] = useState<CameraAngleId>(() => {
+    try {
+      const saved = localStorage.getItem(CAMERA_ANGLE_STORAGE_KEY);
+      if (saved) return saved as CameraAngleId;
+    } catch (e) {}
+    return 'auto';
+  });
 
   // Quick Instant Ideas state
   const [quickIdeas, setQuickIdeas] = useState<QuickInstantIdea[]>([]);
@@ -348,6 +361,7 @@ export default function App() {
           brandKit: activeBrand || undefined,
           framingSettings,
           lightingSettings,
+          cameraAngle,
         }),
       });
 
@@ -401,12 +415,42 @@ export default function App() {
         activePersonas: generatedData.activePersonas || [],
         visualAnalysis: generatedData.visualAnalysis,
         concepts: generatedData.concepts,
+        advertisingDirections:
+          generatedData.advertisingDirections && generatedData.advertisingDirections.length > 0
+            ? generatedData.advertisingDirections
+            : generatedData.concepts && generatedData.concepts.length > 0
+            ? generatedData.concepts.map((c: any, i: number) => ({
+                id: `dir-${i + 1}`,
+                title: c.name || `اتجاه إعلاني ${i + 1}`,
+                creativeIdea: c.adIdea || c.name || '',
+                visualConception: c.visualScene || c.adIdea || '',
+                style:
+                  i === 0
+                    ? 'سينمائي إعلاني فخم (Luxury Commercial)'
+                    : i === 1
+                    ? 'مينيمالي معاصر نقي (Clean Minimalist)'
+                    : 'افتتاحية وتصوير فني راقٍ (Editorial Lifestyle)',
+                lightingAndColors:
+                  i === 0
+                    ? 'إضاءة كياروسكورو درامية مع حواف ذهبية ناعمة'
+                    : i === 1
+                    ? 'إضاءة استوديو متوازنة ناصعة مع ظلال ناعمة'
+                    : 'أضواء نهارية طبيعية غنية بالتباين والحيوية',
+                isBestCandidate: c.isRecommended ?? i === 0,
+                reasonForBest:
+                  c.whyUnique ||
+                  (i === 0
+                    ? 'أعلى توازن بين إبراز تفاصيل المنتج والجاذبية الإعلانية والتأثير البصري'
+                    : undefined),
+              }))
+            : undefined,
         storyOpening: generatedData.storyOpening,
         copywritingElements: generatedData.copywritingElements,
         creativeAdvice: generatedData.creativeAdvice,
         suggestedActions: generatedData.suggestedActions,
         framingSettings: generatedData.framingSettings || framingSettings,
         lightingSettings: generatedData.lightingSettings || lightingSettings,
+        cameraAngle: generatedData.cameraAngle || cameraAngle,
         quickIdeas: generatedData.quickIdeas,
         rawResponse: generatedData.rawResponse,
       };
@@ -479,6 +523,48 @@ export default function App() {
     saveToHistory(updatedResult);
   };
 
+  const handleUpdateCameraAngle = (newAngle: CameraAngleId) => {
+    setCameraAngle(newAngle);
+    try {
+      localStorage.setItem(CAMERA_ANGLE_STORAGE_KEY, newAngle);
+    } catch (e) {}
+  };
+
+  const handleApplyCameraAngleToPrompt = (angleSnippet: string, arSnippet: string) => {
+    if (!result) return;
+
+    let updatedEnglish = result.finalPrompt.englishPrompt || '';
+    if (updatedEnglish.includes('Camera Angle:')) {
+      updatedEnglish = updatedEnglish.replace(/Camera Angle:.*?(\.|$)/is, `Camera Angle: ${angleSnippet}.`);
+    } else {
+      updatedEnglish = `${updatedEnglish.trim()} Camera Angle: ${angleSnippet}.`;
+    }
+
+    let updatedArabic = result.finalPrompt.arabicPrompt || '';
+    if (updatedArabic.includes('زاوية التصوير:')) {
+      updatedArabic = updatedArabic.replace(/زاوية التصوير:.*?(\.|$)/is, `زاوية التصوير: ${arSnippet}.`);
+    } else {
+      updatedArabic = `${updatedArabic.trim()}\nزاوية التصوير: ${arSnippet}.`;
+    }
+
+    const updatedResult: CreativeResult = {
+      ...result,
+      cameraAngle,
+      finalPrompt: {
+        ...result.finalPrompt,
+        englishPrompt: updatedEnglish,
+        arabicPrompt: updatedArabic,
+        breakdown: {
+          ...result.finalPrompt.breakdown,
+          composition: `${result.finalPrompt.breakdown?.composition || ''} (${arSnippet})`.trim(),
+        },
+      },
+    };
+
+    setResult(updatedResult);
+    saveToHistory(updatedResult);
+  };
+
   const handleRequestQuickIdeas = async (
     promptText: string,
     imageObj: { data: string; mimeType: string; name?: string } | null
@@ -529,6 +615,33 @@ export default function App() {
 
   const handleUpdateQuickIdea = (updatedIdea: QuickInstantIdea) => {
     setQuickIdeas((prev) => prev.map((item) => (item.id === updatedIdea.id ? updatedIdea : item)));
+  };
+
+  const handleApplyPromptFromDirection = (
+    promptText: string,
+    tool: TargetTool,
+    ratio?: string
+  ) => {
+    if (result) {
+      const updatedResult: CreativeResult = {
+        ...result,
+        finalPrompt: {
+          ...result.finalPrompt,
+          englishPrompt: promptText,
+          targetTool: tool,
+          aspectRatio: ratio || result.finalPrompt.aspectRatio || '16:9',
+        },
+        targetTool: tool,
+      };
+      setResult(updatedResult);
+    }
+    setCurrentPrompt(promptText);
+    setTargetTool(tool);
+
+    const el = document.getElementById('studio-results-container');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   const handleInputSubmit = (
@@ -633,6 +746,13 @@ export default function App() {
           onChangeTargetTool={handleToolChange}
           personaFocus={personaFocus}
           onChangePersonaFocus={setPersonaFocus}
+          cameraAngle={cameraAngle}
+          onChangeCameraAngle={handleUpdateCameraAngle}
+          onOpenAnglesTab={() => {
+            setWorkbenchTab('angles');
+            const el = document.getElementById('workbench-container');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }}
           activeBrand={activeBrand}
           onOpenBrandVault={() => setIsBrandVaultOpen(true)}
           onDeactivateBrand={() => handleSelectActiveBrand(null)}
@@ -658,25 +778,32 @@ export default function App() {
         )}
 
         {/* Unified Specialized Production Studios Workbench */}
-        <StudioWorkbench
-          framingSettings={framingSettings}
-          onChangeFramingSettings={handleUpdateFramingSettings}
-          lightingSettings={lightingSettings}
-          onChangeLightingSettings={handleUpdateLightingSettings}
-          onApplyLightingToPrompt={handleApplyLightingToPrompt}
-          onApplyFramingToPrompt={
-            result
-              ? () => handleAspectRatioChange(framingSettings.aspectRatio, framingSettings.dimensionId)
-              : undefined
-          }
-          activeBrand={activeBrand}
-          onOpenBrandVault={() => setIsBrandVaultOpen(true)}
-          onDeactivateBrand={() => handleSelectActiveBrand(null)}
-          history={history}
-          onSelectTool={handleToolChange}
-          targetTool={targetTool}
-          language={language}
-        />
+        <div id="workbench-container">
+          <StudioWorkbench
+            framingSettings={framingSettings}
+            onChangeFramingSettings={handleUpdateFramingSettings}
+            lightingSettings={lightingSettings}
+            onChangeLightingSettings={handleUpdateLightingSettings}
+            onApplyLightingToPrompt={handleApplyLightingToPrompt}
+            cameraAngle={cameraAngle}
+            onChangeCameraAngle={handleUpdateCameraAngle}
+            onApplyAngleToPrompt={handleApplyCameraAngleToPrompt}
+            onApplyFramingToPrompt={
+              result
+                ? () => handleAspectRatioChange(framingSettings.aspectRatio, framingSettings.dimensionId)
+                : undefined
+            }
+            activeBrand={activeBrand}
+            onOpenBrandVault={() => setIsBrandVaultOpen(true)}
+            onDeactivateBrand={() => handleSelectActiveBrand(null)}
+            history={history}
+            onSelectTool={handleToolChange}
+            targetTool={targetTool}
+            language={language}
+            activeTabOverride={workbenchTab}
+            onTabChange={setWorkbenchTab}
+          />
+        </div>
 
         {/* Loading Spinner & Active Personas Feedback */}
         {isLoading && (
@@ -795,6 +922,7 @@ export default function App() {
               suggestedSettings={result.suggestedSettings}
               framingSettings={framingSettings}
               lightingSettings={result.lightingSettings || lightingSettings}
+              cameraAngle={result.cameraAngle || cameraAngle}
               onChangeAspectRatio={handleAspectRatioChange}
               rawResponse={result.rawResponse}
               isPromptOnly={result.isPromptOnly}
@@ -811,13 +939,30 @@ export default function App() {
                   />
                 )}
 
-                {/* 3 Creative Concepts Card (If in concept mode) */}
-                {result.concepts && result.concepts.length > 0 && (
-                  <ConceptsCard
-                    concepts={result.concepts}
-                    onSelectConcept={handleAdoptConcept}
+                {/* 3 Suggested Advertising Directions Card (خاصية «اتجاهات إعلانية مقترحة») */}
+                {result.advertisingDirections && result.advertisingDirections.length > 0 && (
+                  <AdvertisingDirectionsCard
+                    directions={result.advertisingDirections}
+                    referenceImage={currentImage}
+                    activeBrand={activeBrand}
+                    framingSettings={framingSettings}
+                    lightingSettings={lightingSettings}
+                    cameraAngle={cameraAngle}
+                    targetTool={targetTool}
+                    onApplyPromptToStudio={handleApplyPromptFromDirection}
+                    language={language}
                   />
                 )}
+
+                {/* 3 Creative Concepts Card (If in concept mode and no advertising directions override) */}
+                {(!result.advertisingDirections || result.advertisingDirections.length === 0) &&
+                  result.concepts &&
+                  result.concepts.length > 0 && (
+                    <ConceptsCard
+                      concepts={result.concepts}
+                      onSelectConcept={handleAdoptConcept}
+                    />
+                  )}
 
                 {/* Copywriting Elements Card */}
                 {result.copywritingElements && (

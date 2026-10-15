@@ -21,6 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { PromptCrafterState, EnginePromptVariants, TargetTool } from '../types.ts';
+import { CAMERA_ANGLE_CATEGORIES } from '../data/cameraAngles.ts';
 
 interface PromptCrafterStudioProps {
   initialState?: Partial<PromptCrafterState>;

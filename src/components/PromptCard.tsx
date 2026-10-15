@@ -16,9 +16,11 @@ import {
   Settings2,
   Crop,
   Sun,
+  Camera,
 } from 'lucide-react';
-import { FinalPrompt, TargetTool, SuggestedSettings, FramingSettings, CinematicLightingSettings } from '../types.ts';
+import { FinalPrompt, TargetTool, SuggestedSettings, FramingSettings, CinematicLightingSettings, CameraAngleId } from '../types.ts';
 import { TARGET_TOOLS, DIMENSION_PRESETS } from '../data/presets.ts';
+import { getCameraAngleById } from '../data/cameraAngles.ts';
 import { AudioPlayer } from './AudioPlayer.tsx';
 
 interface PromptCardProps {
@@ -28,6 +30,7 @@ interface PromptCardProps {
   suggestedSettings?: SuggestedSettings;
   framingSettings?: FramingSettings;
   lightingSettings?: CinematicLightingSettings;
+  cameraAngle?: CameraAngleId;
   onChangeAspectRatio?: (ratio: string, presetId: string) => void;
   rawResponse?: string;
   isPromptOnly?: boolean;
@@ -40,6 +43,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({
   suggestedSettings,
   framingSettings,
   lightingSettings,
+  cameraAngle,
   onChangeAspectRatio,
   rawResponse,
   isPromptOnly,
@@ -75,7 +79,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({
             <Terminal className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-xl font-black text-[#111827]">
                 البرومبت النهائي | Final Prompt
               </h3>
@@ -91,6 +95,12 @@ export const PromptCard: React.FC<PromptCardProps> = ({
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1">
                   <Sun className="w-3 h-3 text-amber-600" />
                   <span>إضاءة سينمائية مخصصة</span>
+                </span>
+              )}
+              {cameraAngle && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-[#4C53DB] border border-indigo-200 flex items-center gap-1">
+                  <Camera className="w-3 h-3 text-[#4C53DB]" />
+                  <span>زاوية: {getCameraAngleById(cameraAngle).nameAr}</span>
                 </span>
               )}
             </div>
@@ -365,8 +375,15 @@ export const PromptCard: React.FC<PromptCardProps> = ({
 
               {prompt.breakdown.composition && (
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <span className="font-bold text-slate-500 block mb-1">التكوين والمنظور:</span>
-                  <p className="text-slate-800 font-medium">{prompt.breakdown.composition}</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-slate-500">التكوين والمنظور والكاميرا:</span>
+                    {cameraAngle && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-[#4C53DB] border border-indigo-200">
+                        {getCameraAngleById(cameraAngle).nameAr}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-800 font-medium leading-relaxed">{prompt.breakdown.composition}</p>
                 </div>
               )}
 

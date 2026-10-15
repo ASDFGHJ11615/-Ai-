@@ -14,9 +14,13 @@ import {
   ShieldCheck,
   Zap,
   Gauge,
+  Camera,
+  Sliders,
 } from 'lucide-react';
-import { CreativeMode, TargetTool, BrandKit } from '../types.ts';
+import { CreativeMode, TargetTool, BrandKit, CameraAngleId } from '../types.ts';
 import { PRESET_IDEAS, TARGET_TOOLS, PERSONAS } from '../data/presets.ts';
+import { CAMERA_ANGLE_CATEGORIES, AUTO_CAMERA_ANGLE } from '../data/cameraAngles.ts';
+import { CameraAngleSelectDropdown } from './CameraAngleSelectDropdown.tsx';
 import { optimizeImageFile } from '../utils/imageOptimizer.ts';
 
 interface StudioInputProps {
@@ -25,6 +29,9 @@ interface StudioInputProps {
   onChangeTargetTool: (tool: TargetTool) => void;
   personaFocus: string | null;
   onChangePersonaFocus: (focus: string | null) => void;
+  cameraAngle?: CameraAngleId;
+  onChangeCameraAngle?: (angle: CameraAngleId) => void;
+  onOpenAnglesTab?: () => void;
   activeBrand?: BrandKit | null;
   onOpenBrandVault?: () => void;
   onDeactivateBrand?: () => void;
@@ -41,6 +48,9 @@ export const StudioInput: React.FC<StudioInputProps> = ({
   onChangeTargetTool,
   personaFocus,
   onChangePersonaFocus,
+  cameraAngle = 'auto',
+  onChangeCameraAngle,
+  onOpenAnglesTab,
   activeBrand,
   onOpenBrandVault,
   onDeactivateBrand,
@@ -457,6 +467,15 @@ export const StudioInput: React.FC<StudioInputProps> = ({
                 ))}
               </select>
             </div>
+
+            {/* Interactive Camera Angle Selector Dropdown */}
+            <CameraAngleSelectDropdown
+              selectedAngleId={cameraAngle || 'auto'}
+              onSelectAngle={(id) => onChangeCameraAngle && onChangeCameraAngle(id)}
+              onOpenAnglesTab={onOpenAnglesTab}
+              language={language}
+              accentColor={currentAccent}
+            />
           </div>
 
           {/* Action Buttons */}
